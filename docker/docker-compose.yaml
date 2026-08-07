@@ -1,0 +1,75 @@
+services:
+  server:
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: ${SERVER_CONTAINER_NAME}
+    hostname: server
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - "${PORTAL_PORT}:9091"
+      - "${ADMIN_PORT}:9092"
+    networks:
+      - app_net
+
+  postgres:
+    image: postgres:${PG_VERSION}
+    container_name: ${PG_CONTAINER_NAME}
+    hostname: postgres
+    environment:
+      - POSTGRES_USER=${PG_SUPER_USER}
+      - POSTGRES_PASSWORD=${PG_SUPER_PWD}
+      - POSTGRES_DB=my_url_shortner          # 补充数据库名称，避免健康检查失败
+      - TZ=Asia/Shanghai
+      - PGTZ=Asia/Shanghai
+    volumes:
+      - pg_data:/var/lib/postgresql/data       # 添加持久化挂载
+      - ../structure.sql:/docker-entrypoint-initdb.d/01_structure.sql
+    ports:
+      - "${PG_LOCAL_PORT}:5432"
+    command: >
+      bash -c "
+        docker-entrypoint.sh postgres &
+        until pg_isready -U ${PG_SUPER_USER} -d my_url_shortner; do sleep 1; done;
+        psql -U ${PG_SUPER_USER} -d my_url_shortner -f /docker-entrypoint-initdb.d/01_structure.sql;
+        wait
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_SUPER_USER} -d my_url_shortner"]
+      timeout: 5s
+      interval: 3s
+      retries: 10     
+    networks:
+      - app_net
+
+  redis:
+    image: redis:${RD_VERSION}
+    container_name: ${RD_CONTAINER_NAME}
+    hostname: redis
+    command: redis-server --requirepass ${RD_PASSWORD}
+    volumes:
+      - redis_data:/data                       # 如需 Redis 数据持久化可保留
+    ports:
+      - "${RD_LOCAL_PORT}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${RD_PASSWORD}", "ping"]
+      timeout: 5s
+      interval: 3s
+      retries: 10
+    networks:
+      - app_net
+
+# 顶层声明网络与持久化数据卷
+networks:
+  app_net:
+    driver: bridge
+    name: ${NET_WORK}                          # 自定义容器网络对外名称
+
+volumes:
+  pg_data:
+  redis_data:
