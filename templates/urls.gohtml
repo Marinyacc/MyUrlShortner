@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>短链接管理系统 - 短链接列表</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { display: flex; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; color: #333; }
+        .sidebar { width: 220px; height: 100vh; background: #1e293b; color: #fff; position: fixed; left: 0; top: 0; padding-top: 20px; }
+        .sidebar h2 { font-size: 18px; text-align: center; margin-bottom: 30px; color: #38bdf8; }
+        .sidebar a { display: block; padding: 12px 24px; color: #94a3b8; text-decoration: none; font-size: 14px; }
+        .sidebar a:hover, .sidebar a.active { background: #334155; color: #fff; border-left: 4px solid #38bdf8; }
+        .logout-btn { display: block; width: 100%; text-align: left; background: none; border: none; padding: 12px 24px; color: #ef4444; font-size: 14px; cursor: pointer; margin-top: 40px; }
+        .logout-btn:hover { background: #334155; }
+        .main-content { margin-left: 220px; padding: 30px; width: calc(100% - 220px); }
+        .form-card { background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .form-inline { display: flex; gap: 10px; }
+        .form-inline input { flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 4px; }
+        .btn { padding: 8px 16px; background: #0284c7; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-danger { background: #ef4444; }
+        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        th { background: #f8fafc; color: #475569; }
+        .pagination { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 20px; }
+        .short-url-link { color: #0284c7; font-weight: 600; text-decoration: none; }
+        .short-url-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>ShortURL Admin</h2>
+        <a href="/admin/dashboard">仪表盘</a>
+        <a href="/admin/urls" class="active">短链接列表</a>
+        <a href="/admin/stats">统计数据</a>
+        <a href="/admin/access_logs">访问日志</a>
+        <button class="logout-btn" onclick="logout()">退出登录</button>
+    </div>
+
+    <div class="main-content">
+        <h1>短链接管理</h1>
+
+        <div class="form-card" style="margin-top: 20px;">
+            <form id="createForm" class="form-inline">
+                <input type="url" name="long_url" placeholder="请输入原始长链接 (https://...)" required>
+                <input type="text" name="comment" placeholder="备注信息 (可选)">
+                <button type="submit" class="btn">生成短链接</button>
+            </form>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>原始链接</th>
+                    <th>短链接</th>
+                    <th>备注</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .short_urls }}
+                <tr>
+                    <td>{{ .ID }}</td>
+                    <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="{{ .LongUrl }}" target="_blank" style="color: #64748b; text-decoration: none;">{{ .LongUrl }}</a>
+                    </td>
+                    <td>
+                        <a class="short-url-link" href="http://localhost:9091/{{ .ShortUrl }}" target="_blank">
+                            http://localhost:9091/{{ .ShortUrl }}
+                        </a>
+                    </td>
+                    <td>{{ .Comment }}</td>
+                    <td>{{ .CreatedTime.Format "2006-01-02 15:04:05" }}</td>
+                    <td>
+                        <button class="btn btn-danger" onclick="deleteUrl('{{ .ShortUrl }}')">删除</button>
+                    </td>
+                </tr>
+                {{ else }}
+                <tr><td colspan="6" style="text-align: center; color: #94a3b8;">暂无数据</td></tr>
+                {{ end }}
+            </tbody>
+        </table>
+
+        <div class="pagination">
+            <button class="btn" onclick="changePage({{ .page }} - 1)" {{ if le .page 1 }}disabled style="opacity: 0.5; cursor: not-allowed;"{{ end }}>上一页</button>
+            <span>第 {{ .page }} / {{ .totalPage }} 页</span>
+            <button class="btn" onclick="changePage({{ .page }} + 1)" {{ if ge .page .totalPage }}disabled style="opacity: 0.5; cursor: not-allowed;"{{ end }}>下一页</button>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('createForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            try {
+                const res = await fetch('/admin/urls/generate', { method: 'POST', body: formData });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    location.reload();
+                } else {
+                    alert(`创建失败: ${data.error || data.message || '系统未知错误'}`);
+                }
+            } catch (err) {
+                alert(`网络异常: ${err.message}`);
+            }
+        };
+
+        async function deleteUrl(shortUrl) {
+            if (!confirm(`确定要删除短链接 [${shortUrl}] 及其相关日志吗？`)) return;
+            try {
+                const formData = new FormData();
+                formData.append('short_url', shortUrl);
+                const res = await fetch('/admin/urls/delete', { method: 'POST', body: formData });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    location.reload();
+                } else {
+                    alert(`删除失败: ${data.error || data.message || '系统未知错误'}`);
+                }
+            } catch (err) {
+                alert(`网络异常: ${err.message}`);
+            }
+        }
+
+        function changePage(newPage) {
+            const totalPage = {{ .totalPage }};
+            if (newPage < 1 || newPage > totalPage) return;
+            window.location.href = `?page=${newPage}&page_size={{ .pageSize }}`;
+        }
+
+        async function logout() {
+            await fetch('/admin/logout', { method: 'POST' });
+            window.location.href = '/login';
+        }
+    </script>
+</body>
+</html>

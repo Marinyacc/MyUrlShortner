@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统登录</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f6f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .login-card {
+            background-color: #ffffff;
+            padding: 30px 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-card h2 {
+            text-align: center;
+            margin-bottom: 24px;
+            color: #333;
+        }
+        .alert-error {
+            background-color: #fde8e8;
+            color: #e53e3e;
+            padding: 10px 14px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            border-left: 4px solid #e53e3e;
+        }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            color: #4a5568;
+            margin-bottom: 6px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus {
+            border-color: #3182ce;
+        }
+        .captcha-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .captcha-container input {
+            flex: 1;
+        }
+        .captcha-img {
+            height: 40px;
+            width: 130px;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+            cursor: pointer;
+            object-fit: cover;
+            background-color: #edf2f7;
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background-color: #3182ce;
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 10px;
+        }
+        .btn-submit:hover {
+            background-color: #2b6cb0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <h2>系统登录</h2>
+
+    <!-- 1. Gin 服务端校验错误提示 -->
+    {{ if .error }}
+    <div class="alert-error">
+        {{ .error }}
+    </div>
+    {{ end }}
+
+    <!-- 2. 登录表单 -->
+    <form action="/login" method="POST">
+        <!-- 账号 -->
+        <div class="form-group">
+            <label for="account">账号</label>
+            <input type="text" id="account" name="account" placeholder="请输入账号" required>
+        </div>
+
+        <!-- 密码 -->
+        <div class="form-group">
+            <label for="password">密码</label>
+            <input type="password" id="password" name="password" placeholder="请输入密码" required>
+        </div>
+
+        <!-- 验证码 -->
+        <div class="form-group">
+            <label for="captcha-text">验证码</label>
+            <div class="captcha-container">
+                <input type="text" id="captcha-text" name="captcha-text" placeholder="验证码" autocomplete="off" required>
+                <!-- 点击验证码图片重新加载 -->
+                <img id="captcha-img" class="captcha-img" src="" alt="验证码" title="点击刷新验证码" onclick="loadCaptcha()">
+            </div>
+        </div>
+
+        <!-- 隐藏域：保存 captcha-id 供后端 PostForm("captcha-id") 读取 -->
+        <input type="hidden" id="captcha-id" name="captcha-id">
+
+        <button type="submit" class="btn-submit">登 录</button>
+    </form>
+</div>
+
+<script>
+    async function loadCaptcha() {
+        try {
+            const response = await fetch('/captcha');
+
+            if (!response.ok) {
+                console.error(`请求验证码接口失败，HTTP 状态码: ${response.status}`);
+                return;
+            }
+
+            const resData = await response.json();
+            
+            // 提取后端返回的验证码 ID
+            let captchaId = "";
+            if (typeof resData === 'object' && resData !== null) {
+                captchaId = resData.result || resData.data || resData.Data || resData.id || "";
+            } else if (typeof resData === 'string') {
+                captchaId = resData;
+            }
+
+            // 更新 DOM：拼接 .png 后缀满足 dchest/captcha 的请求规范
+            if (captchaId && typeof captchaId === 'string') {
+                document.getElementById('captcha-id').value = captchaId;
+                document.getElementById('captcha-img').src = '/captcha/' + captchaId + '.png?t=' + new Date().getTime();
+            } else {
+                console.error('未能成功提取到 captchaId 字符串:', resData);
+            }
+        } catch (error) {
+            console.error('获取或解析验证码异常:', error);
+        }
+    }
+
+    // 页面初次加载时自动请求验证码
+    window.onload = loadCaptcha;
+</script>
+
+</body>
+</html>
