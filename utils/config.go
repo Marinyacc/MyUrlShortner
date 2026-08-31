@@ -32,6 +32,7 @@ func InitConfig(file string) error {
 	global.Conf.App.Port = appSection.Key("port").MustInt()
 	global.Conf.App.AdminPort = appSection.Key("adminport").MustInt()
 	global.Conf.App.UrlPrefix = appSection.Key("url_prefix").String()
+	global.Conf.App.AdminUrlPrefix = appSection.Key("admin_url_prefix").String()
 
 	captchaSection := cfg.Section("captcha")
 	global.Conf.Captcha.Strore = captchaSection.Key("store").String()

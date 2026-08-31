@@ -12,9 +12,10 @@ type CaptchaConfig struct {
 }
 
 type AppConfig struct {
-	Port      int
-	AdminPort int
-	UrlPrefix string
+	Port           int
+	AdminPort      int
+	UrlPrefix      string
+	AdminUrlPrefix string
 }
 
 type RedisConfig struct {

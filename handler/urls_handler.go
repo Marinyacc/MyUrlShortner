@@ -90,6 +90,8 @@ func RedirectLongUrl(c *gin.Context) {
 func RedirectSuccess(c *gin.Context, shortUrl, longUrl string) {
 	c.Redirect(http.StatusFound, longUrl)
 
+
+	//todo : 使用worker pool ， 限制goroutine 的生成
 	go storage.Ip_Count_Incr(shortUrl, c.ClientIP())
 	go storage.ProduceMessage(global.StreamName, shortUrl, c.ClientIP())
 }

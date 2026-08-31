@@ -51,7 +51,7 @@
                 {{ range .short_url_stats }}
                 <tr>
                     <td>
-                        <a class="short-url-link" href="http://localhost:9091/{{ .ShortUrl }}" target="_blank">
+                        <a class="short-url-link" href="{{ portalBaseURL }}/{{ .ShortUrl }}" target="_blank">
                             {{ .ShortUrl }}
                         </a>
                     </td>

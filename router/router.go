@@ -1,16 +1,35 @@
 package router
 
 import (
+	"html/template"
+	"my_url_shortner/global"
 	"my_url_shortner/handler"
 	"my_url_shortner/middleware"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
+func templateFuncMap() template.FuncMap {
+	return template.FuncMap{
+		"portalBaseURL": func() string {
+			return trimBaseURL(global.Conf.App.UrlPrefix)
+		},
+		"adminBaseURL": func() string {
+			return trimBaseURL(global.Conf.App.AdminUrlPrefix)
+		},
+	}
+}
+
+func trimBaseURL(raw string) string {
+	return strings.TrimRight(strings.TrimSpace(raw), "/")
+}
+
 //localhost:9092/
 func NewAdminRouter() *gin.Engine {
 	r := gin.Default()
+	r.SetFuncMap(templateFuncMap())
 	r.LoadHTMLGlob("templates/*")
 	// r.Use(middleware.LogMiddleware())
 
@@ -55,7 +74,11 @@ func NewAdminRouter() *gin.Engine {
 //localhost:9091/
 func NewVistorRouter() *gin.Engine {
 	r := gin.Default()
+	r.SetFuncMap(templateFuncMap())
 	r.LoadHTMLGlob("templates/*")
+	r.GET("/healthz", func(c *gin.Context) {
+		c.String(http.StatusOK, "ok")
+	})
 	r.GET("/:url", handler.RedirectLongUrl) //通过shorturl跳转至目标页面
 	r.NoRoute(func(c *gin.Context) {
 		c.HTML(http.StatusNotFound, "error.gohtml", gin.H{

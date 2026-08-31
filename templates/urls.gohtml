@@ -66,8 +66,8 @@
                         <a href="{{ .LongUrl }}" target="_blank" style="color: #64748b; text-decoration: none;">{{ .LongUrl }}</a>
                     </td>
                     <td>
-                        <a class="short-url-link" href="http://localhost:9091/{{ .ShortUrl }}" target="_blank">
-                            http://localhost:9091/{{ .ShortUrl }}
+                        <a class="short-url-link" href="{{ portalBaseURL }}/{{ .ShortUrl }}" target="_blank">
+                            {{ portalBaseURL }}/{{ .ShortUrl }}
                         </a>
                     </td>
                     <td>{{ .Comment }}</td>

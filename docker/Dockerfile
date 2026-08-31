@@ -1,7 +1,7 @@
 # build
 FROM golang:alpine AS server_builder
 WORKDIR /app
-ENV GOPROXY=https://goproxy.cn,direct
+ENV GOPROXY=https://goproxy.cn,direct 
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
@@ -18,5 +18,5 @@ COPY --from=server_builder /app/config_docker.ini ./config.ini
 COPY --from=server_builder /app/templates ./templates
 EXPOSE 9091 9092
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:9091/ || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:9091/healthz || exit 1
 CMD ["./ohurlshortener"]
